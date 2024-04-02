@@ -12,7 +12,7 @@ def plot_image(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
         labeled_images[f'Image {i+1}'] = img
 
     rows, cols = len(labeled_images) // 2, 2
-    fig, axes = plt.subplots(rows, cols, figsize=(8, 6 * rows))
+    fig, axes = plt.subplots(rows, cols, figsize=(8, 3 * rows))
     axes: list[Axes] = [axes] if type(axes) == Axes else axes.flatten()
 
     for ax, (label, pixels) in zip(axes, labeled_images.items()):
@@ -20,8 +20,8 @@ def plot_image(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
         ax.imshow(pixels)
         ax.set_title(label)
 
-    plt.tight_layout()
-    plt.show()
+    fig.tight_layout()
+    fig.savefig('./res/img.png')
     return
 
 
@@ -30,7 +30,7 @@ def plot_rgb(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
         labeled_images[f'Image {i+1}'] = img
 
     rows, cols = len(labeled_images) // 2, 2
-    fig, axes = plt.subplots(rows, cols, figsize=(8, 6 * rows),
+    fig, axes = plt.subplots(rows, cols, figsize=(8, 4 * rows),
                              subplot_kw={'projection': '3d'})
     axes: list[Axes3D] = [axes] if type(axes) == Axes3D else axes.flatten()
 
@@ -55,8 +55,8 @@ def plot_rgb(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
     for ax in axes[1:]:
         ax.shareview(axes[0])
 
-    plt.tight_layout()
-    plt.show()
+    fig.tight_layout()
+    fig.savefig('./res/rgb.png')
 
 
 def plot_yuv(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
@@ -64,7 +64,7 @@ def plot_yuv(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
         labeled_images[f'Image {i+1}'] = img
 
     rows, cols = len(labeled_images) // 2, 2
-    fig, axes = plt.subplots(rows, cols, figsize=(8, 6 * rows),
+    fig, axes = plt.subplots(rows, cols, figsize=(8, 4 * rows),
                              subplot_kw={'projection': '3d'})
     axes: list[Axes3D] = [axes] if type(axes) == Axes3D else axes.flatten()
 
@@ -96,8 +96,8 @@ def plot_yuv(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
     for ax in axes[1:]:
         ax.shareview(axes[0])
 
-    plt.tight_layout()
-    plt.show()
+    fig.tight_layout()
+    fig.savefig('./res/yuv.png')
 
 
 if __name__ == '__main__':

@@ -92,13 +92,20 @@ DEFAULT_TRANSFORM = Compose([
     # Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
+DEFAULT_YUV_TRANSFORM = Compose([
+    RandomCrop(size=(256, 256)),
+    RandomHorizontalFlip(p=0.5),
+    ToDtype(torch.float32, scale=True),
+    # Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
 
 class LOLImageDataset(Dataset):
-    def __init__(self, root: str = 'data/LOL-v2/Real',
+    def __init__(self, root: str = 'data/LOL/',
                  partition: str = 'test',
                  transform: Compose = None,
-                 par_mapping: dict = {'test': 'Test', 'train': 'Train'},
-                 gt_mapping: dict = {'gt': 'Normal', 'lq': 'Low'}) -> None:
+                 par_mapping: dict = {'test': 'test', 'train': 'train'},
+                 gt_mapping: dict = {'gt': 'gt', 'lq': 'lq'}) -> None:
         self.partition = partition
         self.transform = transform
 
@@ -134,9 +141,9 @@ class LOLImageDataset(Dataset):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    dataset = LOLImageDataset(root='data/LOL-v2/Real',
+    dataset = LOLImageDataset(root='data/LOL/',
                               partition='test',
-                              transform=YUV_TRANSFORM)
+                              transform=DEFAULT_TRANSFORM)
     # (3, H, W)
     gt, lq = dataset[0].values()
     fig, axes = plt.subplots(1, 2)

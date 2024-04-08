@@ -1,8 +1,22 @@
 import argparse
+from torch.utils.data import dataloader
+from src.dataloading import LOLImageDataset, DEFAULT_YUV_TRANSFORM
+from model import Cyanet
 
 
 def train(args):
-    pass
+    test_dataset = LOLImageDataset(transform=DEFAULT_YUV_TRANSFORM)
+    test_loader = dataloader(test_dataset)
+    
+    optimizer = None
+    
+    model = Cyanet(32)
+    
+    for batch in test_loader:
+        model.train()
+        pass
+        
+    print(model)
 
 
 def parse_args():
@@ -26,6 +40,7 @@ def parse_args():
                         help='evaluate model on test set')
     parser.add_argument('--pretrained', dest='pretrained', action='store_true',
                         help='use pre-trained model')
+    return parser.parse_args()
 
 
 if __name__ == "__main__":

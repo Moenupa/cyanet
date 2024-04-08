@@ -7,7 +7,7 @@ from dataloading import LOLImageDataset, YUV_TRANSFORM, YUV2RGB, RGB2YUV
 from collections import Counter
 
 
-def plot_image(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
+def plot_image(*images: torch.Tensor, **labeled_images: torch.Tensor):
     for i, img in enumerate(images):
         labeled_images[f'Image {i+1}'] = img
 
@@ -22,10 +22,10 @@ def plot_image(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
 
     fig.tight_layout()
     fig.savefig('./res/img.png')
-    return
+    return fig
 
 
-def plot_rgb(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
+def plot_rgb(*images: torch.Tensor, **labeled_images: torch.Tensor):
     for i, img in enumerate(images):
         labeled_images[f'Image {i+1}'] = img
 
@@ -57,9 +57,10 @@ def plot_rgb(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
 
     fig.tight_layout()
     fig.savefig('./res/rgb.png')
+    return fig
 
 
-def plot_yuv(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
+def plot_yuv(*images: torch.Tensor, **labeled_images: torch.Tensor):
     for i, img in enumerate(images):
         labeled_images[f'Image {i+1}'] = img
 
@@ -98,13 +99,12 @@ def plot_yuv(*images: torch.Tensor, **labeled_images: torch.Tensor) -> None:
 
     fig.tight_layout()
     fig.savefig('./res/yuv.png')
+    return fig
 
 
 if __name__ == '__main__':
-    dataset = LOLImageDataset(root='data/LOL',
-                              par_mapping={'test': 'eval15',
-                                           'train': 'our485'},
-                              gt_mapping={'gt': 'high', 'lq': 'low'})
+    dataset = LOLImageDataset(root='data/LOL')
     plot_rgb(**dataset[0])
     plot_yuv(**dataset[0])
     plot_image(**dataset[0])
+    plt.show()

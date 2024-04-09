@@ -101,7 +101,7 @@ DEFAULT_YUV_TRANSFORM = Compose([
 
 
 class LOLImageDataset(Dataset):
-    def __init__(self, root: str = 'data/LOL/',
+    def __init__(self, root: str,
                  partition: str = 'test',
                  transform: Compose = None,
                  par_mapping: dict = {'test': 'test', 'train': 'train'},

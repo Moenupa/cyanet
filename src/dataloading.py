@@ -79,7 +79,7 @@ class RGB2YUV(Transform):
         return v
 
 
-YUV_TRANSFORM = Compose([
+RGB255_TO_YUV_TRANSFORM = Compose([
     ToDtype(torch.float32, scale=True),
     RGB2YUV(),
 ])
@@ -89,21 +89,14 @@ DEFAULT_TRANSFORM = Compose([
     RandomCrop(size=(256, 256)),
     RandomHorizontalFlip(p=0.5),
     ToDtype(torch.float32, scale=True),
-    # Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
-
-DEFAULT_YUV_TRANSFORM = Compose([
-    RandomCrop(size=(256, 256)),
-    RandomHorizontalFlip(p=0.5),
-    ToDtype(torch.float32, scale=True),
-    # Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 
 class LOLImageDataset(Dataset):
     def __init__(self, root: str,
                  partition: str = 'test',
-                 transform: Compose = None,
+                 transform: Compose = DEFAULT_TRANSFORM,
                  par_mapping: dict = {'test': 'test', 'train': 'train'},
                  gt_mapping: dict = {'gt': 'gt', 'lq': 'lq'}) -> None:
         self.partition = partition
@@ -133,17 +126,16 @@ class LOLImageDataset(Dataset):
         assert ret.shape[0] > 0, f'No images found in {root}'
         return ret
 
-    def peek(self):
-        first = self[0]
-        print(first.shape, first.min(), first.max())
-        return first
+    def peek(self, index: int = 0) -> Image:
+        e = self[index]['gt']
+        print(e.shape, e.min(), e.max())
+        return e
 
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     dataset = LOLImageDataset(root='data/LOL/',
-                              partition='test',
-                              transform=DEFAULT_TRANSFORM)
+                              partition='test')
     # (3, H, W)
     gt, lq = dataset[0].values()
     fig, axes = plt.subplots(1, 2)

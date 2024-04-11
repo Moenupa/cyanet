@@ -4,17 +4,17 @@ from tqdm import trange
 import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
-from src.dataloading import LOLImageDataset, DEFAULT_YUV_TRANSFORM
-from model import Cyanet
+from src.dataloading import LOLImageDataset
+from model import Cyanet, LossFn
 
 
 def train(args):
-    test_dataset = LOLImageDataset(root=args.data,
-                                   partition='train',
-                                   transform=DEFAULT_YUV_TRANSFORM)
-    test_dataset = LOLImageDataset(root=args.data,
-                                   transform=DEFAULT_YUV_TRANSFORM)
-    test_loader = DataLoader(test_dataset)
+    test_dataset = LOLImageDataset(root=args.dataset,
+                                   partition='train')
+    test_dataset = LOLImageDataset(root=args.dataset,
+                                   partition='test')
+    test_loader = DataLoader(test_dataset,
+                             batch_size=args.batch_size, shuffle=True)
 
     if args.resume_from:
         checkpoint = torch.load(args.resume_from)
@@ -35,7 +35,8 @@ def train(args):
             gt = batch['gt']
             lq = model(batch['lq'])
 
-            loss = model.loss(gt=gt, lq=lq)
+            loss_fn = LossFn()
+            loss: torch.Tensor = loss_fn(gt=gt, pred=lq)
             loss.backward()
 
             optimizer.step()
@@ -48,7 +49,7 @@ def train(args):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch Cyanet Training')
-    parser.add_argument('--data', type=str, metavar='DIR', default='data/LOL/',
+    parser.add_argument('--dataset', type=str, metavar='DIR', default='data/LOL/',
                         help='path to dataset')
     parser.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')

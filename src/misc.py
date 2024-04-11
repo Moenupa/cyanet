@@ -3,7 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d.axes3d import Axes3D
-from dataloading import LOLImageDataset, YUV_TRANSFORM, YUV2RGB, RGB2YUV
+from dataloading import LOLImageDataset, RGB255_TO_YUV_TRANSFORM, YUV2RGB, RGB2YUV
 from collections import Counter
 
 
@@ -72,7 +72,7 @@ def plot_yuv(*images: torch.Tensor, **labeled_images: torch.Tensor):
     for ax, (label, pixels) in zip(axes, labeled_images.items()):
         assert 3 in pixels.shape, f'Expected 3 channels, got {pixels.shape}'
         # (n, 3) in YUV space
-        yuv = YUV_TRANSFORM(pixels).flatten(1).numpy()
+        yuv = RGB255_TO_YUV_TRANSFORM(pixels).flatten(1).numpy()
 
         counter = Counter(zip(yuv[0, :], yuv[1, :], yuv[2, :]))
         n_colors = len(counter)

@@ -23,11 +23,13 @@ DEBUG = False
 MAT_YUV2RGB = torch.tensor([[1.000, 0.000, 1.140],
                             [1.000, -0.395, -0.581],
                             [1.000, 2.032, 0.000]],
+                           requires_grad=False,
                            dtype=torch.float32)
 
 MAT_RGB2YUV = torch.tensor([[0.299, 0.587, 0.114],
                             [-0.147, -0.289, 0.436],
                             [0.615, -0.515, -0.100]],
+                           requires_grad=False,
                            dtype=torch.float32)
 
 
@@ -47,7 +49,7 @@ class YUV2RGB(Transform):
 
     @staticmethod
     def yuv2rgb(x: Image) -> Image:
-        v = torch.einsum('ij, jhw->ihw', MAT_YUV2RGB, x)
+        v = torch.einsum('ij, ...jhw->...ihw', MAT_YUV2RGB, x)
         if DEBUG:
             print('r:', v[0, :, :].min(), v[0, :, :].max(),
                   'g:', v[1, :, :].min(), v[1, :, :].max(),
@@ -71,7 +73,7 @@ class RGB2YUV(Transform):
 
     @staticmethod
     def rgb2yuv(x: Image) -> Image:
-        v = torch.einsum('ji, ihw->jhw', MAT_RGB2YUV, x)
+        v = torch.einsum('ji, ...ihw->...jhw', MAT_RGB2YUV, x)
         if DEBUG:
             print('y:', v[0, :, :].min(), v[0, :, :].max(),
                   'u:', v[1, :, :].min(), v[1, :, :].max(),
@@ -134,11 +136,11 @@ class LOLImageDataset(Dataset):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    dataset = LOLImageDataset(root='data/LOL/',
-                              partition='test')
+    dataset = LOLImageDataset()
+    fig, axes = plt.subplots(1, 2)
+
     # (3, H, W)
     gt, lq = dataset[0].values()
-    fig, axes = plt.subplots(1, 2)
     gt = gt.permute(1, 2, 0)
     print(gt.shape, lq.shape)
     axes[0].imshow(gt)

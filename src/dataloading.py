@@ -3,6 +3,7 @@ from glob import glob
 
 import pandas as pd
 import torch
+from torch.nn import Parameter
 from torchvision.io import read_image
 from torchvision.tv_tensors import Image
 from torchvision.transforms.v2 import (
@@ -17,67 +18,55 @@ from torchvision.transforms.v2 import (
 from torch.utils.data import Dataset
 
 
-DEBUG = False
-
-
-MAT_YUV2RGB = torch.tensor([[1.000, 0.000, 1.140],
-                            [1.000, -0.395, -0.581],
-                            [1.000, 2.032, 0.000]],
-                           requires_grad=False,
-                           dtype=torch.float32)
-
-MAT_RGB2YUV = torch.tensor([[0.299, 0.587, 0.114],
-                            [-0.147, -0.289, 0.436],
-                            [0.615, -0.515, -0.100]],
-                           requires_grad=False,
-                           dtype=torch.float32)
-
-
 class YUV2RGB(Transform):
     def __init__(self) -> None:
         super().__init__()
+        self.mat = Parameter(
+            torch.tensor([[1.000, 0.000, 1.140],
+                          [1.000, -0.395, -0.581],
+                          [1.000, 2.032, 0.000]],
+                         dtype=torch.float32),
+            requires_grad=False
+        )
 
     def __call__(self, x: Image) -> torch.Tensor:
         if type(x) == dict:
-            return {k: self.yuv2rgb(v) for k, v in x.items()}
+            return {k: self.forward(v) for k, v in x.items()}
         elif type(x) == Image or type(x) == torch.Tensor:
-            return self.yuv2rgb(x)
+            return self.forward(x)
         elif type(x) == list or type(x) == tuple:
-            return [self.yuv2rgb(v) for v in x]
+            return [self.forward(v) for v in x]
 
         assert False, f'no call script for type {type(x)}'
 
-    @staticmethod
-    def yuv2rgb(x: Image) -> Image:
-        v = torch.einsum('ij, ...jhw->...ihw', MAT_YUV2RGB, x)
-        if DEBUG:
-            print('r:', v[0, :, :].min(), v[0, :, :].max(),
-                  'g:', v[1, :, :].min(), v[1, :, :].max(),
-                  'b:', v[2, :, :].min(), v[2, :, :].max())
+    def forward(self, x: Image) -> Image:
+        v = torch.einsum('ij, ...jhw->...ihw', self.mat, x)
         return v.clamp(0, 1)
 
 
 class RGB2YUV(Transform):
     def __init__(self) -> None:
         super().__init__()
+        self.mat = Parameter(
+            torch.tensor([[0.299, 0.587, 0.114],
+                          [-0.147, -0.289, 0.436],
+                          [0.615, -0.515, -0.100]],
+                         dtype=torch.float32),
+            requires_grad=False
+        )
 
     def __call__(self, x: Image | dict) -> Image | dict:
         if type(x) == dict:
-            return {k: self.rgb2yuv(v) for k, v in x.items()}
+            return {k: self.forward(v) for k, v in x.items()}
         elif type(x) == Image or type(x) == torch.Tensor:
-            return self.rgb2yuv(x)
+            return self.forward(x)
         elif type(x) == list or type(x) == tuple:
-            return [self.rgb2yuv(v) for v in x]
+            return [self.forward(v) for v in x]
 
         assert False, f'no call script for type {type(x)}'
 
-    @staticmethod
-    def rgb2yuv(x: Image) -> Image:
-        v = torch.einsum('ji, ...ihw->...jhw', MAT_RGB2YUV, x)
-        if DEBUG:
-            print('y:', v[0, :, :].min(), v[0, :, :].max(),
-                  'u:', v[1, :, :].min(), v[1, :, :].max(),
-                  'v:', v[2, :, :].min(), v[2, :, :].max())
+    def forward(self, x: Image) -> Image:
+        v = torch.einsum('ji, ...ihw->...jhw', self.mat, x)
         return v
 
 
@@ -88,10 +77,10 @@ RGB255_TO_YUV_TRANSFORM = Compose([
 
 
 DEFAULT_TRANSFORM = Compose([
-    RandomCrop(size=(256, 256)),
+    RandomResizedCrop(size=(128, 128)),
     RandomHorizontalFlip(p=0.5),
     ToDtype(torch.float32, scale=True),
-    Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    # Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 

@@ -125,14 +125,16 @@ class LOLImageDataset(Dataset):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    dataset = LOLImageDataset()
+    dataset = LOLImageDataset('data/LOL', partition='test')
     fig, axes = plt.subplots(1, 2)
 
     # (3, H, W)
-    gt, lq = dataset[0].values()
-    gt = gt.permute(1, 2, 0)
+    sample = dataset[0]
+    print(sample)
+    gt = sample['gt'].permute(1, 2, 0)  # (3, H, W) -> (H, W, 3)
+    lq = sample['lq'].permute(1, 2, 0)
     print(gt.shape, lq.shape)
     axes[0].imshow(gt)
-    axes[1].imshow(lq.permute(1, 2, 0))
+    axes[1].imshow(lq)
     plt.tight_layout()
     plt.show()

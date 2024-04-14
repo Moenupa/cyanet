@@ -3,7 +3,7 @@ import argparse
 import torch
 from torchvision.utils import save_image
 from src.dataloading import LOLImageDataset
-from model import Cyanet, LossFn
+from src.cyanet import Cyanet, LossFn
 
 
 def test(args):
@@ -26,7 +26,7 @@ def test(args):
     save_image(lq, 'lq.jpg')
     save_image(gt, 'gt.jpg')
     save_image(pred, 'pred.jpg')
-    
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch Cyanet Training')

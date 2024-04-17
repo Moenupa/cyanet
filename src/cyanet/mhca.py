@@ -33,16 +33,13 @@ class MultiHeadChannelAttention(Module):
         assert d_out % num_heads == 0, \
             f'multi-head division err: d_out {d_out} % num_heads {num_heads} != 0'
 
-        self.d_in = d_in
-        self.d_out = d_out
         self.d_k = d_out // num_heads
-        self.num_heads = num_heads
 
         self.q = MultiHeadLinear(d_in, num_heads, self.d_k, bias=bias)
         self.k = MultiHeadLinear(d_in, num_heads, self.d_k, bias=bias)
         self.v = MultiHeadLinear(d_in, num_heads, self.d_k, bias=True)
         self.softmax = nn.Softmax(dim=-1)
-        self.fc = nn.Linear(d_out, d_out)
+        self.fc = nn.Linear(d_in, d_out)
 
     def forward(self, x: torch.Tensor):
         B, C, *dims = x.shape
@@ -56,7 +53,7 @@ class MultiHeadChannelAttention(Module):
         attention = self.softmax(self.d_k ** -.5 *
                                  torch.einsum('bihd,bjhd->bhij', Q, K))
 
-        out = torch.einsum('bhij,bjhd->bihd', attention, V)
-        out = out.reshape(B, -1, C)
-        out = self.fc(out)
-        return out.reshape(B, C, *dims)
+        x = torch.einsum('bhij,bjhd->bihd', attention, V)
+        x = x.reshape(B, -1, C)
+        x = self.fc(x)
+        return x.reshape(B, C, *dims)

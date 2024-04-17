@@ -162,4 +162,3 @@ cython_debug/
 out/
 wandb/
 log/
-src/cyanet/cyanet.py

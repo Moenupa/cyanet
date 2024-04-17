@@ -1,5 +1,6 @@
 import torch
-from torch.nn import Module, SmoothL1Loss, L1Loss
+from torch.nn import Module, SmoothL1Loss
+from src.dataloading import RGB2YUV
 
 from torchmetrics.image import (
     PeakSignalNoiseRatio as PSNR,
@@ -10,7 +11,7 @@ from torchmetrics.image import (
 
 
 class LossFn(Module):
-    def __init__(self, alphas: list[int] = [1.00, 0.008, 0.05, 0.06, 0.25]) -> None:
+    def __init__(self, alphas: list[int] = [1.00, 0.008, 0.5, 0.06]) -> None:
         super().__init__()
         self.alphas = alphas
 
@@ -18,22 +19,20 @@ class LossFn(Module):
         self.psnr = PSNR(data_range=1.0)
         self.ssim = SSIM()
         self.lpips = LPIPS(net_type='vgg')
-        self.color = L1Loss()
+        self.rgb2yuv = RGB2YUV()
 
     def forward(self,
-                rgb_gt: torch.Tensor, yuv_gt: torch.Tensor,
-                rgb_pred: torch.Tensor, yuv_pred: torch.Tensor
+                gt: torch.Tensor,
+                pred: torch.Tensor
                 ) -> torch.Tensor:
-        l_pixel = self.pixel(yuv_pred, yuv_gt)
-        l_psnr = 50 - self.psnr(yuv_pred, yuv_gt)
-        l_ssim = 1 - self.ssim(yuv_pred, yuv_gt)
-        l_lpips = self.lpips(rgb_pred, rgb_gt)
-        l_color = self.color(yuv_pred[:, 1:, :, :], yuv_gt[:, 1:, :, :])
+        l_pixel = self.pixel(pred, gt)
+        l_psnr = 50 - self.psnr(pred, gt)
+        l_ssim = 1 - self.ssim(pred, gt)
+        l_lpips = self.lpips(pred, gt)
 
         loss = self.alphas[0] * l_pixel + \
             self.alphas[1] * l_psnr + \
             self.alphas[2] * l_ssim + \
-            self.alphas[3] * l_lpips + \
-            self.alphas[4] * l_color
+            self.alphas[3] * l_lpips
 
         return loss

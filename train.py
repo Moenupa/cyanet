@@ -53,13 +53,11 @@ def train(args):
             gt = batch['gt'].to(args.device)
             lq = batch['lq'].to(args.device)
             optimizer.zero_grad()
-            pred, yuv_pred, yuv_gt = model(lq)
+            pred = model(lq)
 
             loss: torch.Tensor = loss_fn(
-                rgb_gt=gt,
-                yuv_gt=yuv_gt,
-                rgb_pred=pred,
-                yuv_pred=yuv_pred
+                gt=gt,
+                pred=pred,
             )
             loss.backward()
             wandb.log({'training loss': loss.item()})
@@ -85,12 +83,10 @@ def train(args):
                 lq = batch['lq'].to(args.device)
 
                 with torch.no_grad():
-                    pred, yuv_pred, yuv_gt = model(lq)
+                    pred = model(lq)
                     loss: torch.Tensor = loss_fn(
-                        rgb_gt=gt,
-                        yuv_gt=yuv_gt,
-                        rgb_pred=pred,
-                        yuv_pred=yuv_pred
+                        gt=gt,
+                        pred=pred
                     )
                     wandb.log({'test loss': loss.item()})
 

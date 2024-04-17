@@ -1,6 +1,7 @@
 import argparse
 
 import torch
+from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 from src.dataloading import LOLImageDataset
 from src.cyanet import Cyanet, LossFn
@@ -10,22 +11,23 @@ def test(args):
     device = 'cpu'
     dataset = LOLImageDataset(root=args.dataset,
                               partition='test')
+    loader = DataLoader(dataset)
 
     checkpoint = torch.load(args.checkpoint)
-    model = Cyanet(32, device=device)
+    model = Cyanet()
     model.load_state_dict(checkpoint['state_dict'])
 
     loss_fn = LossFn().to(device)
 
     # model = model.to(device)
     model.eval()
-    batch = dataset[0]
-    gt = batch['gt']
-    lq = batch['lq']
-    pred = model(lq.unsqueeze(0)).squeeze()
-    save_image(lq, 'lq.jpg')
-    save_image(gt, 'gt.jpg')
-    save_image(pred, 'pred.jpg')
+    for i, batch in enumerate(loader):
+        gt = batch['gt']
+        lq = batch['lq']
+        pred = model(lq)
+        save_image(lq, f'out/{i}lq.jpg')
+        save_image(gt, f'out/{i}gt.jpg')
+        save_image(pred, f'out/{i}pred.jpg')
 
 
 def parse_args():

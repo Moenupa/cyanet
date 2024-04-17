@@ -29,13 +29,13 @@ def train(args):
 
     if args.resume_from:
         checkpoint = torch.load(args.resume_from)
-        model = Cyanet(32, device=args.device)
+        model = Cyanet()
         model.load_state_dict(checkpoint['state_dict'])
         optimizer = checkpoint['optimizer']
         scheduler = checkpoint['scheduler']
         start_from_epoch = checkpoint['epoch'] + 1
     else:
-        model = Cyanet(32, device=args.device)
+        model = Cyanet()
         optimizer = AdamW(model.parameters(), lr=args.lr,
                           betas=(args.momentum, 0.999),
                           weight_decay=args.weight_decay)
@@ -45,18 +45,21 @@ def train(args):
         start_from_epoch = 0
 
     loss_fn = LossFn().to(args.device)
-
     model = model.to(args.device)
+
     for epoch in trange(start_from_epoch, args.epochs):
         model.train()
         for batch in train_loader:
             gt = batch['gt'].to(args.device)
             lq = batch['lq'].to(args.device)
             optimizer.zero_grad()
+            pred, yuv_pred, yuv_gt = model(lq)
 
             loss: torch.Tensor = loss_fn(
-                gt=gt,
-                pred=model(lq)
+                rgb_gt=gt,
+                yuv_gt=yuv_gt,
+                rgb_pred=pred,
+                yuv_pred=yuv_pred
             )
             loss.backward()
             wandb.log({'training loss': loss.item()})
@@ -82,8 +85,13 @@ def train(args):
                 lq = batch['lq'].to(args.device)
 
                 with torch.no_grad():
-                    pred = model(lq)
-                    loss = loss_fn(gt, pred)
+                    pred, yuv_pred, yuv_gt = model(lq)
+                    loss: torch.Tensor = loss_fn(
+                        rgb_gt=gt,
+                        yuv_gt=yuv_gt,
+                        rgb_pred=pred,
+                        yuv_pred=yuv_pred
+                    )
                     wandb.log({'test loss': loss.item()})
 
 

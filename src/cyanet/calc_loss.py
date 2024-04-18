@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Module, SmoothL1Loss
-from src.dataloading import RGB2YUV
+from src.dataloading import YUV2RGB
 
 from torchmetrics.image import (
     PeakSignalNoiseRatio as PSNR,
@@ -19,7 +19,7 @@ class LossFn(Module):
         self.psnr = PSNR(data_range=1.0)
         self.ssim = SSIM()
         self.lpips = LPIPS(net_type='vgg')
-        self.rgb2yuv = RGB2YUV()
+        self.rgb = YUV2RGB()
 
     def forward(self,
                 gt: torch.Tensor,
@@ -28,7 +28,7 @@ class LossFn(Module):
         l_pixel = self.pixel(pred, gt)
         l_psnr = 50 - self.psnr(pred, gt)
         l_ssim = 1 - self.ssim(pred, gt)
-        l_lpips = self.lpips(pred, gt)
+        l_lpips = self.lpips(self.rgb(pred), self.rgb(gt))
 
         loss = self.alphas[0] * l_pixel + \
             self.alphas[1] * l_psnr + \

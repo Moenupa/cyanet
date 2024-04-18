@@ -2,13 +2,6 @@ import torch
 from torch import nn
 from torch.nn import Module, Parameter
 from .mhca import MultiHeadChannelAttention
-from src.dataloading import RGB2YUV, YUV2RGB
-
-
-class SimpleGate(nn.Module):
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x1, x2 = x.chunk(2, dim=1)
-        return x1 * x2
 
 
 class ColorFusion(Module):
@@ -17,7 +10,7 @@ class ColorFusion(Module):
         self.conv_y = nn.Conv2d(c, c, kernel_size=1)
         self.conv_uv = nn.Conv2d(c, c, kernel_size=1)
         self.alpha = Parameter(
-            torch.zeros(1, c, 1, 1),
+            torch.zeros(1, 1, 1, 1),
             requires_grad=True
         )
         self.ca = SimplifiedChannelAttention(c)
@@ -38,8 +31,10 @@ class SimplifiedChannelAttention(Module):
                                 stride=1, padding=1, groups=c)
         self.ca = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(c, c, kernel_size=1)
+            nn.Conv2d(c, c, kernel_size=1),
+            nn.Tanh()
         )
+
     def forward(self, x: torch.Tensor):
         x = self.lnorm(x)
         return x * self.dwconv(x) * self.ca(x)
@@ -151,13 +146,9 @@ class Cyanet(Module):
             nn.Tanh()
         )
 
-        self.rgb2yuv = RGB2YUV()
-        self.yuv2rgb = YUV2RGB()
-
     def forward(self, x: torch.Tensor):
         # x: (B, 3, H, W), split to y, u, v (B, 1, H, W)
-        yuv_x = self.rgb2yuv(x)
-        y, u, v = yuv_x.split(1, dim=1)
+        y, u, v = x.split(1, dim=1)
         u = u + self.u_denoiser(u)
         v = v + self.v_denoiser(v)
 
@@ -167,9 +158,9 @@ class Cyanet(Module):
         v = self.v_conv(v)
 
         yuv = self.fusion(y, u, v)
-        yuv_pred = self.final_conv(yuv)
-        rgb_pred = self.yuv2rgb(yuv_pred)
-        return rgb_pred
+        y, u, v = self.final_conv(yuv).split(1, dim=1)
+        yuv_pred = torch.cat([(y + 1.) / 2., u, v], dim=1)
+        return yuv_pred
 
 
 def frange(x: torch.Tensor):

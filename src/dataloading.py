@@ -84,6 +84,19 @@ DEFAULT_TRANSFORM = Compose([
 ])
 
 
+CYANET_TRAIN_TF = Compose([
+    RandomResizedCrop(size=(128, 128)),
+    RandomHorizontalFlip(p=0.5),
+    ToDtype(torch.float32, scale=True),
+    RGB2YUV(),
+])
+
+CYANET_TEST_TF = Compose([
+    ToDtype(torch.float32, scale=True),
+    RGB2YUV(),
+])
+
+
 class LOLImageDataset(Dataset):
     def __init__(self, root: str,
                  partition: str = 'test',

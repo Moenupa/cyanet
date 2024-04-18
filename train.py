@@ -8,7 +8,7 @@ import torch
 from torch.optim import AdamW, lr_scheduler
 from torch.utils.data import DataLoader
 
-from src.dataloading import LOLImageDataset
+from src.dataloading import LOLImageDataset, CYANET_TRAIN_TF, CYANET_TEST_TF
 from src.cyanet import Cyanet, LossFn
 
 
@@ -18,12 +18,14 @@ def train(args):
     wandb.save(f"src/cyanet/cyanet.py")
 
     train_dataset = LOLImageDataset(root=args.dataset,
-                                    partition='train')
+                                    partition='train',
+                                    transform=CYANET_TRAIN_TF)
     train_loader = DataLoader(train_dataset,
                               batch_size=args.batch_size,
                               shuffle=True)
     test_dataset = LOLImageDataset(root=args.dataset,
-                                   partition='test')
+                                   partition='test',
+                                   transform=CYANET_TEST_TF)
     test_loader = DataLoader(test_dataset,
                              batch_size=args.batch_size)
 
@@ -53,8 +55,8 @@ def train(args):
             gt = batch['gt'].to(args.device)
             lq = batch['lq'].to(args.device)
             optimizer.zero_grad()
-            pred = model(lq)
 
+            pred = model(lq)
             loss: torch.Tensor = loss_fn(
                 gt=gt,
                 pred=pred,

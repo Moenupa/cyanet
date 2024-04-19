@@ -7,6 +7,29 @@ from .mhca import MultiHeadChannelAttention
 class ColorFusion(Module):
     def __init__(self, c: int) -> None:
         super().__init__()
+        
+        self.y_intro = nn.Sequential(
+            nn.Conv2d(1, c, kernel_size=3, 
+                      padding=1, padding_mode='replicate'),
+            nn.GELU()
+        )
+        self.y_attn = nn.Sequential(
+            nn.MaxPool2d(8),
+            MultiHeadChannelAttention(c, c, num_heads=4),
+            nn.UpsamplingBilinear2d(scale_factor=8)
+        )
+
+        self.u_intro = nn.Sequential(
+            nn.Conv2d(1, c, kernel_size=3, 
+                      padding=1, padding_mode='replicate'),
+            nn.GELU()
+        )
+        self.v_intro = nn.Sequential(
+            nn.Conv2d(1, c, kernel_size=3, 
+                      padding=1, padding_mode='replicate'),
+            nn.GELU()
+        )
+        
         self.conv_y = nn.Conv2d(c, c, kernel_size=1)
         self.conv_uv = nn.Conv2d(2*c, c, kernel_size=1)
         self.alpha = Parameter(
@@ -14,12 +37,29 @@ class ColorFusion(Module):
             requires_grad=True
         )
         self.ca = SimplifiedChannelAttention(c)
+        
+        self.out = nn.Sequential(
+            nn.Conv2d(2*c, c, kernel_size=3,
+                      padding=1, padding_mode='replicate'),
+            nn.GELU(),
+            nn.Conv2d(c, 3, kernel_size=3,
+                      padding=1, padding_mode='replicate'),
+            nn.Tanh()
+        )
 
     def forward(self, y: torch.Tensor, u: torch.Tensor, v: torch.Tensor):
+        # (B, 1, H, W) -> (B, C, H, W) feature space
+        y = self.y_intro(y)
+        y = y + self.y_attn(y)
+        u = self.u_intro(u)
+        v = self.v_intro(v)
+        
         uv = self.conv_uv(torch.cat([u, v], dim=1))
         excited_uv = self.alpha * self.conv_y(y) + uv
         uv = self.ca(excited_uv) + uv + excited_uv
-        return torch.cat([y, uv], dim=1)
+        yuv_feat = torch.cat([y, uv], dim=1)
+
+        return self.out(yuv_feat)
     
     
 class MSEF(Module):
@@ -135,59 +175,22 @@ class Cyanet(Module):
 
     def __init__(self, c: int = 32) -> None:
         super().__init__()
-        assert c % 2 == 0, 'c must be even'
 
-        self.u_denoiser = Denoiser(c // 2)
-        self.v_denoiser = Denoiser(c // 2)
-
-        self.y_intro = nn.Sequential(
-            nn.Conv2d(1, c, kernel_size=3, 
-                      padding=1, padding_mode='replicate'),
-            nn.ReLU()
-        )
-        self.y_attn = nn.Sequential(
-            nn.MaxPool2d(8),
-            MultiHeadChannelAttention(c, c, num_heads=4),
-            nn.UpsamplingBilinear2d(scale_factor=8)
-        )
-
-        self.u_conv = nn.Sequential(
-            nn.Conv2d(1, c, kernel_size=3, 
-                      padding=1, padding_mode='replicate'),
-            nn.ReLU()
-        )
-        self.v_conv = nn.Sequential(
-            nn.Conv2d(1, c, kernel_size=3, 
-                      padding=1, padding_mode='replicate'),
-            nn.ReLU()
-        )
+        self.u_denoiser = Denoiser(c)
+        self.v_denoiser = Denoiser(c)
 
         self.fusion = ColorFusion(c)
-
-        self.final_conv = nn.Sequential(
-            nn.Conv2d(2*c, c, kernel_size=3,
-                      padding=1, padding_mode='replicate'),
-            nn.ReLU(),
-            nn.Conv2d(c, 3, kernel_size=3,
-                      padding=1, padding_mode='replicate'),
-            nn.Tanh()
-        )
 
     def forward(self, x: torch.Tensor):
         # x: (B, 3, H, W), split to y, u, v (B, 1, H, W)
         y, u, v = x.split(1, dim=1)
         u = u + self.u_denoiser(u)
         v = v + self.v_denoiser(v)
+        
+        yuv = torch.cat([y, u, v], dim=1)
 
-        y = self.y_intro(y)
-        y = y + self.y_attn(y)
-        u = self.u_conv(u)
-        v = self.v_conv(v)
-
-        yuv = self.fusion(y, u, v)
-        # y, u, v = self.final_conv(yuv).split(1, dim=1)
-        # yuv_pred = torch.cat([(y + 1.) / 2., u, v], dim=1)
-        return self.final_conv(yuv)
+        res_yuv = self.fusion(y, u, v)
+        return res_yuv + yuv
 
 
 def frange(x: torch.Tensor):

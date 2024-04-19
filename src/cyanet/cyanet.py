@@ -11,7 +11,7 @@ class ColorFusion(Module):
         self.y_intro = nn.Sequential(
             nn.Conv2d(1, c, kernel_size=3, 
                       padding=1, padding_mode='replicate'),
-            nn.GELU()
+            nn.ReLU()
         )
         self.y_attn = nn.Sequential(
             nn.MaxPool2d(8),
@@ -22,12 +22,12 @@ class ColorFusion(Module):
         self.u_intro = nn.Sequential(
             nn.Conv2d(1, c, kernel_size=3, 
                       padding=1, padding_mode='replicate'),
-            nn.GELU()
+            nn.ReLU()
         )
         self.v_intro = nn.Sequential(
             nn.Conv2d(1, c, kernel_size=3, 
                       padding=1, padding_mode='replicate'),
-            nn.GELU()
+            nn.ReLU()
         )
         
         self.conv_y = nn.Conv2d(c, c, kernel_size=1)
@@ -41,7 +41,7 @@ class ColorFusion(Module):
         self.out = nn.Sequential(
             nn.Conv2d(2*c, c, kernel_size=3,
                       padding=1, padding_mode='replicate'),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Conv2d(c, 3, kernel_size=3,
                       padding=1, padding_mode='replicate'),
             nn.Tanh()

@@ -57,18 +57,22 @@ def train(args):
             optimizer.zero_grad()
 
             pred = model(lq)
-            loss: torch.Tensor = loss_fn(
+            loss, l_pixel, l_psnr, l_ssim, l_lpips = loss_fn(
                 gt=gt,
-                pred=pred,
+                pred=pred
             )
             loss.backward()
-            wandb.log({'training loss': loss.item()})
+            wandb.log({'training loss': loss.item(),
+                       'training pixel loss': l_pixel.item(),
+                       'training pnsr loss': l_psnr.item(),
+                       'training ssim loss': l_ssim.item(),
+                       'training lpips loss': l_lpips.item()})
 
             optimizer.step()
 
         # update learning rate after each epoch, and save model checkpoint
-        scheduler.step()
         wandb.log({'lr': scheduler.get_last_lr()[0]})
+        scheduler.step()
         if (epoch + 1) % args.ckpt_interval == 0:
             torch.save({
                 'state_dict': model.state_dict(),
@@ -86,33 +90,45 @@ def train(args):
 
                 with torch.no_grad():
                     pred = model(lq)
-                    loss: torch.Tensor = loss_fn(
+                    loss, l_pixel, l_psnr, l_ssim, l_lpips = loss_fn(
                         gt=gt,
                         pred=pred
                     )
-                    wandb.log({'test loss': loss.item()})
+                    wandb.log({'test loss': loss.item(),
+                               'test pixel loss': l_pixel.item(),
+                               'test pnsr loss': l_psnr.item(),
+                               'test ssim loss': l_ssim.item(),
+                               'test lpips loss': l_lpips.item()})
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch Cyanet Training')
-    parser.add_argument('--exp', default=f'{datetime.now():%y%m%d-%H%M}', type=str,
-                        metavar='EXP', help='name of experiment (default: YYmmdd-HHMM)')
-    parser.add_argument('--dataset', type=str, metavar='DIR', default='data/LOL',
+    parser.add_argument('--exp', type=str, metavar='NAME', 
+                        default=f'{datetime.now():%y%m%d-%H%M}', 
+                        help='name of experiment (default: YYmmdd-HHMM)')
+    parser.add_argument('--dataset', type=str, metavar='DIR', 
+                        default='data/LOL',
                         help='path to dataset (default: data/LOL)')
-    parser.add_argument('--device', default='cuda:0' if torch.cuda.is_available() else 'cpu',
-                        type=str, metavar='DEVICE', help='device to use (default: cuda:0)')
+    parser.add_argument('--device', type=str, metavar='DEVICE',
+                        default='cuda:0' if torch.cuda.is_available() else 'cpu',
+                        help='device to use (default: cuda:0)')
 
-    parser.add_argument('--epochs', default=200, type=int, metavar='N',
+    parser.add_argument('--epochs', type=int, metavar='N',
+                        default=200,
                         help='number of epochs to train (default: 200)')
-    parser.add_argument('-b', '--batch-size', default=64, type=int,
-                        metavar='B', help='mini-batch size (default: 64)')
+    parser.add_argument('-b', '--batch-size', type=int, metavar='B', 
+                        default=64, 
+                        help='mini-batch size (default: 64)')
 
-    parser.add_argument('--lr', '--learning-rate', default=2e-4, type=float,
-                        metavar='LR', help='initial learning rate (default: 2e-4)')
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+    parser.add_argument('--lr', '--learning-rate', type=float, metavar='LR', 
+                        default=2e-4, 
+                        help='initial learning rate (default: 2e-4)')
+    parser.add_argument('--momentum', type=float, metavar='M',
+                        default=0.9, 
                         help='momentum for optimizer (default: 0.9)')
-    parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
-                        metavar='W', help='weight decay (default: 1e-4)')
+    parser.add_argument('--weight-decay', '--wd', type=float, metavar='WD', 
+                        default=1e-4, 
+                        help='weight decay (default: 1e-4)')
 
     # checkpointing
     parser.add_argument('--resume-from', default='', type=str, metavar='PATH',

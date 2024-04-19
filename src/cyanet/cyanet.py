@@ -8,7 +8,7 @@ class ColorFusion(Module):
     def __init__(self, c: int) -> None:
         super().__init__()
         self.conv_y = nn.Conv2d(c, c, kernel_size=1)
-        self.conv_uv = nn.Conv2d(c, c, kernel_size=1)
+        self.conv_uv = nn.Conv2d(2*c, c, kernel_size=1)
         self.alpha = Parameter(
             torch.zeros(1, 1, 1, 1),
             requires_grad=True
@@ -16,11 +16,33 @@ class ColorFusion(Module):
         self.ca = SimplifiedChannelAttention(c)
 
     def forward(self, y: torch.Tensor, u: torch.Tensor, v: torch.Tensor):
-        # y: (B, c, H, W); u, v: (B, c // 2, H, W)
-        uv = torch.cat([u, v], dim=1)
-        excited_uv = self.alpha * self.conv_y(y) + self.conv_uv(uv)
+        uv = self.conv_uv(torch.cat([u, v], dim=1))
+        excited_uv = self.alpha * self.conv_y(y) + uv
         uv = self.ca(excited_uv) + uv + excited_uv
         return torch.cat([y, uv], dim=1)
+    
+    
+class MSEF(Module):
+    def __init__(self, c: int, reduction_ratio: int = 8) -> None:
+        super().__init__()
+        self.lnorm = nn.GroupNorm(1, c)
+        self.pool = nn.AdaptiveAvgPool2d((None, None))
+        self.se = nn.Sequential(
+            nn.Linear(c, c // reduction_ratio),
+            nn.ReLU(),
+            nn.Linear(c // reduction_ratio, c),
+            nn.Tanh()
+        )
+        self.dwconv = nn.Conv2d(c, c, kernel_size=3,
+                                stride=1, padding=1, groups=c)
+
+    def forward(self, x: torch.Tensor):
+        # B, C, H, W
+        x = self.lnorm(x)
+        pooled = self.pool(x)
+        se = self.se(pooled.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+
+        return x * se * self.dwconv(x)
 
 
 class SimplifiedChannelAttention(Module):
@@ -130,12 +152,12 @@ class Cyanet(Module):
         )
 
         self.u_conv = nn.Sequential(
-            nn.Conv2d(1, c // 2, kernel_size=3, 
+            nn.Conv2d(1, c, kernel_size=3, 
                       padding=1, padding_mode='replicate'),
             nn.ReLU()
         )
         self.v_conv = nn.Sequential(
-            nn.Conv2d(1, c // 2, kernel_size=3, 
+            nn.Conv2d(1, c, kernel_size=3, 
                       padding=1, padding_mode='replicate'),
             nn.ReLU()
         )
@@ -143,9 +165,11 @@ class Cyanet(Module):
         self.fusion = ColorFusion(c)
 
         self.final_conv = nn.Sequential(
-            nn.Conv2d(2*c, c, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(2*c, c, kernel_size=3,
+                      padding=1, padding_mode='replicate'),
             nn.ReLU(),
-            nn.Conv2d(c, 3, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(c, 3, kernel_size=3,
+                      padding=1, padding_mode='replicate'),
             nn.Tanh()
         )
 
@@ -161,9 +185,9 @@ class Cyanet(Module):
         v = self.v_conv(v)
 
         yuv = self.fusion(y, u, v)
-        y, u, v = self.final_conv(yuv).split(1, dim=1)
-        yuv_pred = torch.cat([(y + 1.) / 2., u, v], dim=1)
-        return yuv_pred
+        # y, u, v = self.final_conv(yuv).split(1, dim=1)
+        # yuv_pred = torch.cat([(y + 1.) / 2., u, v], dim=1)
+        return self.final_conv(yuv)
 
 
 def frange(x: torch.Tensor):

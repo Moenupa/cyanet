@@ -92,6 +92,7 @@ CYANET_TRAIN_TF = Compose([
 ])
 
 CYANET_TEST_TF = Compose([
+    RandomResizedCrop(size=(256, 256)),
     ToDtype(torch.float32, scale=True),
     RGB2YUV(),
 ])

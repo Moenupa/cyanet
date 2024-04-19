@@ -11,7 +11,7 @@ from torchmetrics.image import (
 
 
 class LossFn(Module):
-    def __init__(self, alphas: list[int] = [1.00, 0.008, 0.5, 0.06]) -> None:
+    def __init__(self, alphas: list[int] = [1.00, 0.008, 0.05, 0.06]) -> None:
         super().__init__()
         self.alphas = alphas
 

@@ -3,14 +3,21 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
-from src.dataloading import LOLImageDataset
+from torchvision.transforms.functional import adjust_gamma
+from src.dataloading import LOLImageDataset, YUV2RGB, CYANET_TEST_TF
 from src.cyanet import Cyanet, LossFn
 
+
+yuv2rgb = YUV2RGB()
+
+def post_proc(x: torch.Tensor) -> torch.Tensor:
+    return adjust_gamma(yuv2rgb(x), 1)
 
 def test(args):
     device = 'cpu'
     dataset = LOLImageDataset(root=args.dataset,
-                              partition='test')
+                              partition='test',
+                              transform=CYANET_TEST_TF)
     loader = DataLoader(dataset)
 
     checkpoint = torch.load(args.checkpoint)
@@ -18,16 +25,16 @@ def test(args):
     model.load_state_dict(checkpoint['state_dict'])
 
     loss_fn = LossFn().to(device)
+    model = model.to(device)
 
-    # model = model.to(device)
     model.eval()
     for i, batch in enumerate(loader):
         gt = batch['gt']
         lq = batch['lq']
         pred = model(lq)
-        save_image(lq, f'out/{i}lq.jpg')
-        save_image(gt, f'out/{i}gt.jpg')
-        save_image(pred, f'out/{i}pred.jpg')
+        save_image(post_proc(lq), f'out/{i}lq.jpg')
+        save_image(post_proc(gt), f'out/{i}gt.jpg')
+        save_image(post_proc(pred), f'out/{i}pred.jpg')
 
 
 def parse_args():

@@ -119,7 +119,8 @@ class Cyanet(Module):
         self.v_denoiser = Denoiser(c // 2)
 
         self.y_intro = nn.Sequential(
-            nn.Conv2d(1, c, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(1, c, kernel_size=3, 
+                      padding=1, padding_mode='replicate'),
             nn.ReLU()
         )
         self.y_attn = nn.Sequential(
@@ -129,11 +130,13 @@ class Cyanet(Module):
         )
 
         self.u_conv = nn.Sequential(
-            nn.Conv2d(1, c // 2, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(1, c // 2, kernel_size=3, 
+                      padding=1, padding_mode='replicate'),
             nn.ReLU()
         )
         self.v_conv = nn.Sequential(
-            nn.Conv2d(1, c // 2, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(1, c // 2, kernel_size=3, 
+                      padding=1, padding_mode='replicate'),
             nn.ReLU()
         )
 
